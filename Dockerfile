@@ -1,5 +1,5 @@
-# Use the official Node.js image as a base
-FROM node:18
+# Stage 1: Build
+FROM node:18 AS build
 
 # Set the working directory
 WORKDIR /app
@@ -9,14 +9,24 @@ COPY package.json package-lock.json ./
 
 # Install dependencies
 RUN npm install
+
 # Copy the rest of the application code
 COPY . .
 
 # Build the application
 RUN npm run build
 
-# Expose the port the app runs on
-EXPOSE 5173
+# Stage 2: Nginx
+FROM nginx:alpine
 
-# Command to run the application
-CMD ["npm", "run", "dev"]
+# Copy the built files from the build stage
+COPY --from=build /app/build /usr/share/nginx/html
+
+# Copy custom Nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose the port Nginx is running on
+EXPOSE 80
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
